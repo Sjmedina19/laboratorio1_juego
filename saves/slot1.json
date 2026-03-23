@@ -1,0 +1,11 @@
+{
+    "scene": "virtual_world",
+    "player": [
+        2360,
+        1053
+    ],
+    "chest": true,
+    "enemy": true,
+    "zone": true,
+    "tutorial": true
+}
