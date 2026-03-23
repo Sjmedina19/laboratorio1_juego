@@ -27,6 +27,7 @@ class MenuScene:
 
     def load_menu_background(self):
         candidates = [
+            os.path.join("assets", "imagenes", "fondo menu.png"),
             os.path.join("assets", "images", "ui", "menu_bg.png"),
             os.path.join("assets", "images", "menu_bg.png"),
             os.path.join("assets", "menu_bg.png"),
@@ -64,10 +65,16 @@ class MenuScene:
 
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_w, pygame.K_UP):
+                old_selected = self.selected
                 self.selected = (self.selected - 1) % len(self.options)
+                if self.selected != old_selected:
+                    return {"action": "play_sfx", "sfx": "click"}
 
             elif event.key in (pygame.K_s, pygame.K_DOWN):
+                old_selected = self.selected
                 self.selected = (self.selected + 1) % len(self.options)
+                if self.selected != old_selected:
+                    return {"action": "play_sfx", "sfx": "click"}
 
             elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                 return self.execute_selected()
@@ -76,6 +83,9 @@ class MenuScene:
             mx, my = event.pos
             for i, rect in enumerate(self.option_rects):
                 if rect.collidepoint(mx, my):
+                    if self.selected != i:
+                        self.selected = i
+                        return {"action": "play_sfx", "sfx": "click"}
                     self.selected = i
                     break
 
