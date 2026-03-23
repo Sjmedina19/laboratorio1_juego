@@ -1,4 +1,5 @@
 import pygame
+from entities.player import Player
 
 
 class OverworldScene:
@@ -104,13 +105,7 @@ class OverworldScene:
         self.world_width = 3000
         self.world_height = 2000
 
-        self.player = pygame.Rect(400, 1700, 40, 50)
-        self.player_fx = float(self.player.x)
-        self.player_fy = float(self.player.y)
-
-        self.speed = 250
-        self.run_speed = 420
-        self.direction = "down"
+        self.player = Player(400, 1700)
 
         self.cam_x = 0
         self.cam_y = 0
@@ -215,7 +210,14 @@ class OverworldScene:
                 self.zone_timer = 0
 
         if not self.dialogue.active:
-            self.move(dt)
+            keys = pygame.key.get_pressed()
+            self.player.handle_movement(
+                dt,
+                keys,
+                collision_rects=self.get_collision_objects(),
+                world_width=self.world_width,
+                world_height=self.world_height
+            )
             self.check_events()
 
         self.update_camera()
@@ -262,61 +264,13 @@ class OverworldScene:
         if not self.enemy_defeated:
             pygame.draw.rect(screen, (200, 60, 60), self.to_screen(self.enemy))
 
-        pygame.draw.rect(screen, (60, 120, 255), self.to_screen(self.player))
+        self.player.draw(screen, self.to_screen)
 
         self.draw_ui(screen)
         self.dialogue.draw(screen)
 
         if self.paused:
             self.draw_pause(screen)
-
-    def move(self, dt):
-        keys = pygame.key.get_pressed()
-        speed = self.run_speed if (keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]) else self.speed
-
-        dx = 0.0
-        dy = 0.0
-
-        if keys[pygame.K_w]:
-            dy -= speed * dt
-            self.direction = "up"
-        if keys[pygame.K_s]:
-            dy += speed * dt
-            self.direction = "down"
-        if keys[pygame.K_a]:
-            dx -= speed * dt
-            self.direction = "left"
-        if keys[pygame.K_d]:
-            dx += speed * dt
-            self.direction = "right"
-
-        self.move_axis(dx, 0)
-        self.move_axis(0, dy)
-
-    def move_axis(self, dx, dy):
-        if dx != 0:
-            self.player_fx += dx
-            self.player.x = int(round(self.player_fx))
-
-            for w in self.get_collision_objects():
-                if self.player.colliderect(w):
-                    if dx > 0:
-                        self.player.right = w.left
-                    elif dx < 0:
-                        self.player.left = w.right
-                    self.player_fx = float(self.player.x)
-
-        if dy != 0:
-            self.player_fy += dy
-            self.player.y = int(round(self.player_fy))
-
-            for w in self.get_collision_objects():
-                if self.player.colliderect(w):
-                    if dy > 0:
-                        self.player.bottom = w.top
-                    elif dy < 0:
-                        self.player.top = w.bottom
-                    self.player_fy = float(self.player.y)
 
     def get_collision_objects(self):
         objs = self.walls + [self.npc]
@@ -330,8 +284,8 @@ class OverworldScene:
         max_cam_x = max(0, self.world_width - self.width)
         max_cam_y = max(0, self.world_height - self.height)
 
-        self.cam_x = max(0, min(self.player.centerx - self.width // 2, max_cam_x))
-        self.cam_y = max(0, min(self.player.centery - self.height // 2, max_cam_y))
+        self.cam_x = max(0, min(self.player.rect.centerx - self.width // 2, max_cam_x))
+        self.cam_y = max(0, min(self.player.rect.centery - self.height // 2, max_cam_y))
 
     def to_screen(self, rect):
         return pygame.Rect(
@@ -351,7 +305,7 @@ class OverworldScene:
             ("enemy", self.enemy)
         ]
 
-        px, py = self.player.center
+        px, py = self.player.rect.center
         best_name = None
         best_dist = None
 
@@ -434,7 +388,7 @@ class OverworldScene:
         return None
 
     def check_events(self):
-        if self.player.colliderect(self.explore_zone) and not self.entered_zone:
+        if self.player.rect.colliderect(self.explore_zone) and not self.entered_zone:
             self.entered_zone = True
             self.dialogue.start("Sistema", [
                 "Entraste a la zona de exploración.",
@@ -470,7 +424,7 @@ class OverworldScene:
     def get_save_data(self):
         return {
             "scene": "virtual_world",
-            "player": (self.player.x, self.player.y),
+            "player": (self.player.rect.x, self.player.rect.y),
             "chest": self.chest_opened,
             "enemy": self.enemy_defeated,
             "zone": self.entered_zone,
@@ -481,9 +435,7 @@ class OverworldScene:
         if not data:
             return
 
-        self.player.x, self.player.y = data.get("player", (400, 1700))
-        self.player_fx = float(self.player.x)
-        self.player_fy = float(self.player.y)
+        self.player.rect.x, self.player.rect.y = data.get("player", (400, 1700))
 
         self.chest_opened = data.get("chest", False)
         self.enemy_defeated = data.get("enemy", False)
@@ -501,6 +453,3 @@ class OverworldScene:
         self.dialogue.index = 0
 
         self.update_camera()
-
-
-overworld = OverworldScene

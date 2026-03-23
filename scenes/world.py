@@ -1,5 +1,6 @@
 import pygame
 import os
+from entities.player import Player
 
 
 class WorldScene:
@@ -15,8 +16,7 @@ class WorldScene:
             self.background, (screen_width, screen_height)
         )
 
-        self.player = pygame.Rect(560, 500, 40, 55)
-        self.speed = 250
+        self.player = Player(560, 500)
 
         self.pc_rect = pygame.Rect(300, 300, 150, 100)
 
@@ -64,7 +64,7 @@ class WorldScene:
 
             else:
                 if event.key == pygame.K_e:
-                    if self.player.colliderect(self.pc_rect):
+                    if self.player.rect.colliderect(self.pc_rect):
                         return {"action": "start_loading_virtual_world"}
 
         return None
@@ -94,28 +94,13 @@ class WorldScene:
             return
 
         keys = pygame.key.get_pressed()
-
-        speed = self.speed
-        if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
-            speed *= 1.8
-
-        dx = 0
-        dy = 0
-
-        if keys[pygame.K_w]:
-            dy -= speed * dt
-        if keys[pygame.K_s]:
-            dy += speed * dt
-        if keys[pygame.K_a]:
-            dx -= speed * dt
-        if keys[pygame.K_d]:
-            dx += speed * dt
-
-        self.player.x += int(dx)
-        self.player.y += int(dy)
-
-        self.player.x = max(0, min(self.player.x, self.screen_width - self.player.width))
-        self.player.y = max(0, min(self.player.y, self.screen_height - self.player.height))
+        self.player.handle_movement(
+            dt,
+            keys,
+            collision_rects=[],
+            world_width=self.screen_width,
+            world_height=self.screen_height
+        )
 
         if self.message_timer > 0:
             self.message_timer -= dt
@@ -125,13 +110,13 @@ class WorldScene:
     def get_save_data(self):
         return {
             "scene": "bedroom",
-            "x": self.player.x,
-            "y": self.player.y
+            "x": self.player.rect.x,
+            "y": self.player.rect.y
         }
 
     def load_save_data(self, data):
-        self.player.x = data.get("x", 500)
-        self.player.y = data.get("y", 500)
+        self.player.rect.x = data.get("x", 500)
+        self.player.rect.y = data.get("y", 500)
 
     def show_message(self, text, duration=2):
         self.message = text
@@ -151,9 +136,9 @@ class WorldScene:
     def draw(self, screen):
         screen.blit(self.background, (0, 0))
 
-        pygame.draw.rect(screen, (220, 60, 60), self.player)
+        self.player.draw(screen)
 
-        if self.player.colliderect(self.pc_rect):
+        if self.player.rect.colliderect(self.pc_rect):
             text = self.font.render("E para usar PC", True, (255, 255, 0))
             screen.blit(text, (20, self.screen_height - 60))
 
