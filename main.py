@@ -37,6 +37,12 @@ class Game:
 
         self.clock = pygame.time.Clock()
         self.screen = None
+        self.current_music_path = None
+
+        self.audio_available = self.init_audio()
+        self.menu_music_path = self.find_menu_music_path()
+        self.sfx_paths = self.find_sfx_paths()
+        self.sfx = self.load_sfx()
 
         self.previous_scene_type = "menu"
         self.previous_world_save = None
@@ -47,6 +53,87 @@ class Game:
             self.screen.get_width(),
             self.screen.get_height()
         )
+        self.update_music_for_scene()
+
+    def init_audio(self):
+        try:
+            if pygame.mixer.get_init() is None:
+                pygame.mixer.init()
+            return True
+        except pygame.error:
+            return False
+
+    def find_menu_music_path(self):
+        candidates = [
+            os.path.join("assets", "music", "delon_boomkin-tribal-drum-rhythm-463957.mp3"),
+            os.path.join("assets", "music", "363_full_game-of-rings_0155_preview.mp3.mpeg"),
+        ]
+        for path in candidates:
+            if os.path.exists(path):
+                return path
+        return None
+
+    def find_sfx_paths(self):
+        return {
+            "click": os.path.join("assets", "sounds", "click.wav.mp3"),
+            "save": os.path.join("assets", "sounds", "recoger.wav.mp3"),
+            "interact": os.path.join("assets", "sounds", "cofre.wav.mp3"),
+            "error": os.path.join("assets", "sounds", "collision.wav.mp3"),
+        }
+
+    def load_sfx(self):
+        if not self.audio_available:
+            return {}
+
+        loaded = {}
+        for key, path in self.sfx_paths.items():
+            if os.path.exists(path):
+                try:
+                    loaded[key] = pygame.mixer.Sound(path)
+                except pygame.error:
+                    pass
+        self.apply_audio_settings()
+        return loaded
+
+    def apply_audio_settings(self):
+        if not self.audio_available:
+            return
+
+        music_volume = 0.0 if self.settings["mute_music"] else max(0.0, min(1.0, self.settings["music_volume"] / 100.0))
+        sfx_volume = 0.0 if self.settings["mute_sfx"] else max(0.0, min(1.0, self.settings["sfx_volume"] / 100.0))
+
+        pygame.mixer.music.set_volume(music_volume)
+        for snd in self.sfx.values():
+            snd.set_volume(sfx_volume)
+
+    def play_sfx(self, name):
+        if not self.audio_available:
+            return
+        snd = self.sfx.get(name)
+        if snd is not None:
+            snd.play()
+
+    def update_music_for_scene(self):
+        if not self.audio_available:
+            return
+
+        target_music = self.menu_music_path if isinstance(self.current_scene, MenuScene) else None
+        if target_music is None:
+            if self.current_music_path is not None:
+                pygame.mixer.music.stop()
+                self.current_music_path = None
+            return
+
+        if self.current_music_path != target_music:
+            try:
+                pygame.mixer.music.load(target_music)
+                pygame.mixer.music.play(-1)
+                self.current_music_path = target_music
+            except pygame.error:
+                self.current_music_path = None
+                return
+
+        self.apply_audio_settings()
 
     def apply_display_settings(self):
         if self.settings["fullscreen"]:
@@ -129,6 +216,7 @@ class Game:
     def preview_settings(self, new_settings):
         self.settings = new_settings.copy()
         self.apply_display_settings()
+        self.apply_audio_settings()
 
         self.current_scene = SettingsScene(
             self.screen.get_width(),
@@ -136,10 +224,12 @@ class Game:
             self.settings,
             self.available_resolutions
         )
+        self.update_music_for_scene()
 
     def close_settings(self, new_settings):
         self.settings = new_settings.copy()
         self.apply_display_settings()
+        self.apply_audio_settings()
 
         if self.previous_scene_type == "game" and self.previous_world_save is not None:
             scene_name = self.previous_world_save.get("scene", "bedroom")
@@ -169,6 +259,7 @@ class Game:
                 self.screen.get_width(),
                 self.screen.get_height()
             )
+        self.update_music_for_scene()
 
     def return_to_menu(self, message=""):
         self.current_scene = MenuScene(
@@ -176,6 +267,7 @@ class Game:
             self.screen.get_height(),
             message=message
         )
+        self.update_music_for_scene()
 
     def run(self):
         while self.running:
@@ -193,22 +285,34 @@ class Game:
                 if result:
                     action = result.get("action")
 
+                    if action == "play_sfx":
+                        self.play_sfx(result.get("sfx", "click"))
+                        continue
+
                     if action == "new_game":
+                        self.play_sfx("click")
                         self.start_new_game()
+                        self.update_music_for_scene()
 
                     elif action == "continue_game":
+                        self.play_sfx("click")
                         self.continue_game()
+                        self.update_music_for_scene()
 
                     elif action == "settings":
+                        self.play_sfx("click")
                         self.open_settings()
+                        self.update_music_for_scene()
 
                     elif action == "preview_settings":
                         self.preview_settings(result["settings"])
 
                     elif action == "back_from_settings":
+                        self.play_sfx("click")
                         self.close_settings(result["settings"])
 
                     elif action == "start_loading_virtual_world":
+                        self.play_sfx("interact")
                         self.current_scene = LoadingScene(
                             self.screen.get_width(),
                             self.screen.get_height(),
@@ -218,23 +322,29 @@ class Game:
                             ),
                             duration=1.5
                         )
+                        self.update_music_for_scene()
 
                     elif action == "finish_loading":
                         self.current_scene = result["next_scene"]
+                        self.update_music_for_scene()
 
                     elif action == "quit":
+                        self.play_sfx("click")
                         self.running = False
 
                     elif action == "save_game":
+                        self.play_sfx("save")
                         save_data = self.current_scene.get_save_data()
                         self.save_game(save_data)
 
                     elif action == "save_and_menu":
+                        self.play_sfx("save")
                         save_data = self.current_scene.get_save_data()
                         self.save_game(save_data)
                         self.return_to_menu("Partida guardada.")
 
                     elif action == "menu_without_save":
+                        self.play_sfx("click")
                         self.return_to_menu("Volviste al menú.")
 
             if self.running:
@@ -245,6 +355,7 @@ class Game:
             if scene_result:
                 if scene_result["action"] == "finish_loading":
                     self.current_scene = scene_result["next_scene"]
+                    self.update_music_for_scene()
 
             self.current_scene.draw(self.screen)
             pygame.display.flip()

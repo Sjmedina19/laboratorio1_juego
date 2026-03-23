@@ -366,7 +366,7 @@ class OverworldScene:
                 "Abre cofres para conseguir objetos útiles.",
                 "Enfrenta enemigos cuando estés preparado."
             ])
-            return None
+            return {"action": "play_sfx", "sfx": "interact"}
 
         elif obj == "chest":
             if self.chest_opened:
@@ -377,7 +377,7 @@ class OverworldScene:
                 "Obtienes 3 ciberballs.",
                 "Podrás usarlas más adelante."
             ])
-            return None
+            return {"action": "play_sfx", "sfx": "interact"}
 
         elif obj == "enemy":
             if self.enemy_defeated:
@@ -388,7 +388,7 @@ class OverworldScene:
                     "No estás listo aún.",
                     "Busca recursos primero."
                 ])
-                return None
+                return {"action": "play_sfx", "sfx": "error"}
             else:
                 self.dialogue.start("Enemigo", [
                     "Prepárate...",
@@ -396,7 +396,7 @@ class OverworldScene:
                 ])
                 self.enemy_defeated = True
                 self.pending_action = {"action": "start_battle"}
-                return None
+                return {"action": "play_sfx", "sfx": "interact"}
 
         return None
 
