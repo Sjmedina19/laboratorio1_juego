@@ -139,10 +139,16 @@ class WorldScene:
         self.player.draw(screen)
 
         if self.player.rect.colliderect(self.pc_rect):
+            prompt_box = pygame.Surface((260, 38), pygame.SRCALPHA)
+            prompt_box.fill((0, 0, 0, 140))
+            screen.blit(prompt_box, (14, self.screen_height - 68))
             text = self.font.render("E para usar PC", True, (255, 255, 0))
             screen.blit(text, (20, self.screen_height - 60))
 
         if self.message:
+            msg_box = pygame.Surface((360, 40), pygame.SRCALPHA)
+            msg_box.fill((0, 0, 0, 150))
+            screen.blit(msg_box, (390, 644))
             text = self.font.render(self.message, True, (255, 255, 255))
             screen.blit(text, (400, 650))
 

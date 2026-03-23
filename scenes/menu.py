@@ -1,3 +1,4 @@
+import os
 import pygame
 
 
@@ -9,6 +10,7 @@ class MenuScene:
         self.font_title = pygame.font.SysFont("arial", 60, bold=True)
         self.font_option = pygame.font.SysFont("arial", 34)
         self.font_message = pygame.font.SysFont("arial", 24)
+        self.font_hint = pygame.font.SysFont("arial", 20)
 
         self.options = [
             "Nueva partida",
@@ -21,11 +23,29 @@ class MenuScene:
         self.message = message
         self.option_rects = []
         self.layout_dirty = True
+        self.menu_background = self.load_menu_background()
+
+    def load_menu_background(self):
+        candidates = [
+            os.path.join("assets", "images", "ui", "menu_bg.png"),
+            os.path.join("assets", "images", "menu_bg.png"),
+            os.path.join("assets", "menu_bg.png"),
+        ]
+        for path in candidates:
+            if os.path.exists(path):
+                img = pygame.image.load(path).convert()
+                return pygame.transform.scale(img, (self.screen_width, self.screen_height))
+        return None
 
     def on_resize(self, new_w, new_h):
         self.screen_width = new_w
         self.screen_height = new_h
         self.layout_dirty = True
+        if self.menu_background is not None:
+            self.menu_background = pygame.transform.scale(
+                self.menu_background,
+                (new_w, new_h)
+            )
 
     def update_layout(self):
         if not self.layout_dirty:
@@ -91,7 +111,14 @@ class MenuScene:
 
     def draw(self, screen):
         self.update_layout()
-        screen.fill((20, 20, 35))
+        if self.menu_background is not None:
+            screen.blit(self.menu_background, (0, 0))
+        else:
+            screen.fill((20, 20, 35))
+
+        dark_overlay = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
+        dark_overlay.fill((10, 10, 20, 110))
+        screen.blit(dark_overlay, (0, 0))
 
         title = self.font_title.render("LABORATORIO 1", True, (255, 255, 255))
         screen.blit(title, title.get_rect(center=(self.screen_width // 2, 100)))
@@ -102,6 +129,8 @@ class MenuScene:
             text_color = (255, 255, 255) if i == self.selected else (20, 20, 20)
 
             pygame.draw.rect(screen, color, rect, border_radius=8)
+            if i == self.selected:
+                pygame.draw.rect(screen, (210, 180, 255), rect, 2, border_radius=8)
             text = self.font_option.render(option, True, text_color)
             screen.blit(text, text.get_rect(center=rect.center))
 
@@ -109,3 +138,6 @@ class MenuScene:
             msg = self.font_message.render(self.message, True, (255, 235, 130))
             msg_rect = msg.get_rect(center=(self.screen_width // 2, self.screen_height - 50))
             screen.blit(msg, msg_rect)
+
+        hint = self.font_hint.render("W/S o Flechas - Enter para seleccionar", True, (220, 220, 220))
+        screen.blit(hint, (20, self.screen_height - 30))

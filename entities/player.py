@@ -101,6 +101,9 @@ class Player:
         elif to_screen is not None and hasattr(to_screen, "apply"):
             draw_rect = to_screen.apply(self.rect)
 
+        shadow = pygame.Rect(draw_rect.x + 6, draw_rect.bottom - 10, max(8, draw_rect.width - 12), 10)
+        pygame.draw.ellipse(surface, (0, 0, 0, 90), shadow)
+
         frames = self.animations.get(self.direction, [])
         if frames:
             image = frames[self.frame_index % len(frames)]

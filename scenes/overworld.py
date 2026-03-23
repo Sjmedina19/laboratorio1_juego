@@ -67,7 +67,9 @@ class OverworldScene:
                 return
 
             box = pygame.Rect(40, self.height - 180, self.width - 80, 140)
-            pygame.draw.rect(screen, (20, 20, 30), box, border_radius=10)
+            box_overlay = pygame.Surface((box.width, box.height), pygame.SRCALPHA)
+            box_overlay.fill((18, 18, 30, 220))
+            screen.blit(box_overlay, box.topleft)
             pygame.draw.rect(screen, (200, 200, 200), box, 2, border_radius=10)
 
             title = self.title_font.render(self.speaker, True, (255, 220, 120))
@@ -109,6 +111,8 @@ class OverworldScene:
 
         self.cam_x = 0
         self.cam_y = 0
+        self.cam_fx = 0.0
+        self.cam_fy = 0.0
 
         self.dialogue = self.DialogueBox(width, height)
 
@@ -147,6 +151,8 @@ class OverworldScene:
         max_cam_y = max(0, self.world_height - self.height)
         self.cam_x = max(0, min(self.cam_x, max_cam_x))
         self.cam_y = max(0, min(self.cam_y, max_cam_y))
+        self.cam_fx = float(self.cam_x)
+        self.cam_fy = float(self.cam_y)
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -284,8 +290,15 @@ class OverworldScene:
         max_cam_x = max(0, self.world_width - self.width)
         max_cam_y = max(0, self.world_height - self.height)
 
-        self.cam_x = max(0, min(self.player.rect.centerx - self.width // 2, max_cam_x))
-        self.cam_y = max(0, min(self.player.rect.centery - self.height // 2, max_cam_y))
+        target_x = max(0, min(self.player.rect.centerx - self.width // 2, max_cam_x))
+        target_y = max(0, min(self.player.rect.centery - self.height // 2, max_cam_y))
+
+        # Camera smoothing keeps movement less abrupt without changing gameplay.
+        self.cam_fx += (target_x - self.cam_fx) * 0.12
+        self.cam_fy += (target_y - self.cam_fy) * 0.12
+
+        self.cam_x = int(self.cam_fx)
+        self.cam_y = int(self.cam_fy)
 
     def to_screen(self, rect):
         return pygame.Rect(
@@ -397,12 +410,18 @@ class OverworldScene:
 
     def draw_ui(self, screen):
         font = pygame.font.SysFont("arial", 20)
+        ui_strip = pygame.Surface((self.width, 54), pygame.SRCALPHA)
+        ui_strip.fill((0, 0, 0, 110))
+        screen.blit(ui_strip, (0, 0))
 
         if self.zone_timer > 0:
             txt = font.render("Puerto Principal", True, (255, 255, 255))
             screen.blit(txt, (self.width // 2 - 80, 20))
 
         if self.show_hint and not self.dialogue.active and not self.paused:
+            hint_box = pygame.Surface((140, 30), pygame.SRCALPHA)
+            hint_box.fill((0, 0, 0, 130))
+            screen.blit(hint_box, (14, self.height - 46))
             txt = font.render("Presiona E", True, (255, 255, 255))
             screen.blit(txt, (20, self.height - 40))
 
@@ -452,4 +471,6 @@ class OverworldScene:
         self.dialogue.lines = []
         self.dialogue.index = 0
 
+        self.cam_fx = float(self.cam_x)
+        self.cam_fy = float(self.cam_y)
         self.update_camera()
