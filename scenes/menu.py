@@ -28,12 +28,11 @@ class MenuScene:
         self.screen_width = new_w
         self.screen_height = new_h
         self.layout_dirty = True
-        if self.menu_background is not None:
+        if self.menu_background:
             self.menu_background = pygame.transform.scale(self.menu_background,(new_w,new_h))
 
     def update_layout(self):
-        if not self.layout_dirty:
-            return
+        if not self.layout_dirty: return
         x = self.screen_width//2 - 170
         start_y = max(180, self.screen_height//3)
         self.option_rects = [pygame.Rect(x,start_y + i*80,340,55) for i in range(len(self.options))]
@@ -44,24 +43,17 @@ class MenuScene:
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_w, pygame.K_UP):
                 self.selected = (self.selected-1)%len(self.options)
-                self.game.sfx["click"].play()
             elif event.key in (pygame.K_s, pygame.K_DOWN):
                 self.selected = (self.selected+1)%len(self.options)
-                self.game.sfx["click"].play()
             elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                self.game.sfx["click"].play()
                 return self.execute_selected()
-        elif event.type == pygame.MOUSEMOTION:
-            mx,my = event.pos
-            for i,rect in enumerate(self.option_rects):
-                if rect.collidepoint(mx,my):
-                    if self.selected != i:
-                        self.selected = i
-                        self.game.sfx["click"].play()
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button==1:
             mx,my = event.pos
             for i,rect in enumerate(self.option_rects):
                 if rect.collidepoint(mx,my):
                     self.selected = i
+                    self.game.sfx["click"].play()
                     return self.execute_selected()
         return None
 
